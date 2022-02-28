@@ -1,0 +1,10 @@
+bab(-a)(-b)(-b)
+ba(-b)(-b)(-a)b
+aba(-b)(-a)(-a)
+(-b)(-a)(-a)baa
+aab(-a)(-a)(-b)
+(-a)baa(-b)(-a)
+aab(-a)(-b)(-a)
+bba(-b)(-a)(-b)
+baa(-b)(-a)(-a)
+abb(-a)(-b)(-b)
