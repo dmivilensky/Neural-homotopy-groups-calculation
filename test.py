@@ -1,4 +1,4 @@
-from free_group import free_group_bounded, normal_closure, reciprocal, conjugation, is_in_subgroup
+from core.free_group import free_group_bounded, normal_closure, reciprocal, conjugation, is_in_subgroup
 
 a = next(free_group_bounded())
 b = next(free_group_bounded())

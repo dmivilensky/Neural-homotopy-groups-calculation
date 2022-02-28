@@ -3,14 +3,14 @@ import random
 
 
 def free_group_bounded(generators_number=2, max_length=5):
-    generators = set(range(1, generators_number + 1)) | set(range(-generators_number, -1))
+    generators = set(range(1, generators_number + 1)) | set(range(-generators_number, 0))
 
     while True:
         length = max(1, int(math.asinh(random.random() * math.cosh(max_length - 1))))
         word = []
 
         for _ in range(length):
-            factor = random.sample(generators - set(word[-1:]), 1)[0]
+            factor = random.sample(generators - set(reciprocal(word[-1:])), 1)[0]
             word.append(factor)
         
         yield word
@@ -55,13 +55,17 @@ def is_in_subgroup(subgroup, word):
     n, m, pointer = len(word), len(subgroup), 0
     while pointer < n:
         # s сдвиг t <=> |s| = |t| && s подстрока в t_1t_2...t_nt_1t_2...t_n 
-        if pointer + m <= n and sublist(word[pointer:pointer + m], doubled_s) != -1:
+        if pointer + m <= n and (sublist(word[pointer:pointer + m], doubled_s) != -1 or sublist(word[pointer:pointer + m], doubled_rs) != -1):
             pointer += m
         else:
             _word.append(word[pointer])
             pointer += 1
-    
-    return len(normalize(_word)) == 0
+
+    return is_trivial(_word)
+
+
+def is_trivial(word):
+    return len(word) == 0 or len(normalize(word)) == 0
 
 
 def conjugation(word, conjugator):
