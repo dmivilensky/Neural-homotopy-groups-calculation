@@ -53,9 +53,9 @@ def is_in_subgroup(subgroup, word):
             else:
                 _word.append(word[pointer])
                 pointer += 1
-        return (flag, _word)
+        return (flag, normalize(_word))
     
-    flag, _word = False, word[::]
+    flag, _word = True, word[::]
     while not flag:
         flag, _word = remove_subgroup_rotations(subgroup, _word)
     
