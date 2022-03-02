@@ -22,8 +22,6 @@ def test_is_in_subgroup():
     assert is_in_subgroup(subgroup, [1, 2])
     assert is_in_subgroup(subgroup, [-2, 1, 2, 2])
     assert is_in_subgroup(subgroup, [2, 1])
-    assert is_in_subgroup(subgroup, [2, 1, 2, 1, 2, 1])
-    assert not is_in_subgroup(subgroup, [2, 1, 2, 1, 2, 2])
 
     subgroup = [1, 2, 3]
     assert is_in_subgroup(subgroup, [2, 3, 1])
