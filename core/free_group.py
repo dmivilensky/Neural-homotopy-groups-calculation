@@ -2,20 +2,6 @@ import math
 import random
 
 
-def free_group_bounded(generators_number=2, max_length=5):
-    generators = set(range(1, generators_number + 1)) | set(range(-generators_number, 0))
-
-    while True:
-        length = max(1, int(math.asinh(random.random() * math.cosh(max_length - 1))))
-        word = []
-
-        for _ in range(length):
-            factor = random.sample(generators - set(reciprocal(word[-1:])), 1)[0]
-            word.append(factor)
-        
-        yield word
-
-
 def reciprocal(word):
     return [-factor for factor in word[::-1]]
 
@@ -30,9 +16,6 @@ def normalize(word):
     return _word
 
 
-'''
-
-'''
 def is_in_subgroup(subgroup, word):
     doubled_s, doubled_rs = subgroup * 2, reciprocal(subgroup) * 2
 
@@ -56,10 +39,18 @@ def is_in_subgroup(subgroup, word):
         return (flag, normalize(_word))
     
     flag, _word = True, word[::]
-    while not flag:
+    while flag:
         flag, _word = remove_subgroup_rotations(subgroup, _word)
     
     return is_trivial(_word)
+
+
+def is_in_intersection(subgroups, word):
+    return all(map(lambda s: is_in_subgroup(s, word), subgroups))
+
+
+def wu_numerator_subgroups(group_index):
+    return [[t] for t in range(1, group_index + 1)] + [[t for t in range(1, group_index + 1)]]
 
 
 def is_trivial(word):
@@ -78,23 +69,3 @@ def conjugation(word, conjugator):
         j += 1
     
     return inverted_conjugator[:(-i if i != 0 else len(inverted_conjugator)+1)] + word[i:(-j if j != 0 else len(word)+1)] + conjugator[j:]
-
-
-def normal_closure(subgroup, generators_number=2, max_length=5):
-    while True:
-        length = max(1, int(math.asinh(random.random() * math.cosh(max_length - 1))))
-        word = []
-
-        while len(word) < length:
-            factor = random.sample(subgroup, 1)[0]
-            if random.random() > 0.5:
-                factor = reciprocal(factor)
-
-            conjugator = next(free_group_bounded(
-                generators_number=generators_number, 
-                max_length=(length - len(word) - len(factor)) // 2
-            ))
-            print(factor, conjugator)
-            word += conjugation(factor, conjugator)
-
-        yield word

@@ -1,4 +1,6 @@
-from core.free_group import free_group_bounded, normal_closure, reciprocal, conjugation, is_in_subgroup
+from core.free_group import reciprocal, conjugation, is_in_subgroup
+from data.naive_generator import generator_from_free_group_bounded as free_group_bounded
+from data.closure_generator import generator_from_normal_closure as normal_closure
 
 a = next(free_group_bounded())
 b = next(free_group_bounded())
