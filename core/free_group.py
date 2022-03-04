@@ -58,14 +58,8 @@ def is_trivial(word):
 
 
 def conjugation(word, conjugator):
-    inverted_conjugator = reciprocal(conjugator)
+    return normalize(reciprocal(conjugator) + word + conjugator)
 
-    i = 0
-    while i < min(len(inverted_conjugator), len(word)) and inverted_conjugator[-(i+1)] + word[i] == 0:
-        i += 1
 
-    j = 0
-    while j < min(len(word), len(conjugator)) and word[-(j+1)] + conjugator[j] == 0:
-        j += 1
-    
-    return inverted_conjugator[:(-i if i != 0 else len(inverted_conjugator)+1)] + word[i:(-j if j != 0 else len(word)+1)] + conjugator[j:]
+def commutator(x, y):
+    return normalize(reciprocal(x) + reciprocal(y) + x + y)
