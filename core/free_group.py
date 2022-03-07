@@ -63,3 +63,10 @@ def conjugation(word, conjugator):
 
 def commutator(x, y):
     return normalize(reciprocal(x) + reciprocal(y) + x + y)
+
+
+def symmetric_commutator(words):
+    acc = words[0]
+    for w in words[1:]:
+        acc = commutator(acc, w)
+    return normalize(acc)
