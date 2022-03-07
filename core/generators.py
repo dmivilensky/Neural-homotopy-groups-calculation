@@ -21,8 +21,8 @@ class LengthConfig:
 
 
 def generator_from_free_group_bounded(generators_number=2, length_config = {'length': 5}):
-    generators = set(range(-generators_number, generators_number + 1)) - set(0)
-    length_generator = LengthConfig.read_length_config()
+    generators = set(range(-generators_number, generators_number + 1)) - set([0])
+    length_generator = LengthConfig.read_length_config(length_config)
     while True:
         word, length = [], length_generator()
 
@@ -34,7 +34,7 @@ def generator_from_free_group_bounded(generators_number=2, length_config = {'len
 
 
 def generator_from_normal_closure(subgroup, generators_number=2, length_config = {'length': 5}):
-    length_generator = LenConfig.read_length_config(length_config)
+    length_generator = LengthConfig.read_length_config(length_config)
     while True:
         word, length = [], length_generator()
 
@@ -42,8 +42,8 @@ def generator_from_normal_closure(subgroup, generators_number=2, length_config =
             factor = subgroup if random() > 0.5 else reciprocal(subgroup)
             
             conjugator = next(generator_from_free_group_bounded(
-                generators_number=generators_number, 
-                {LengthConfig.MAX_LENGTH : (length - len(word) - len(factor)) // 2}
+                generators_number=generators_number,
+                length_config={LengthConfig.MAX_LENGTH : (length - len(word) - len(factor)) // 2}
             ))
             word += conjugation(factor, conjugator)
 

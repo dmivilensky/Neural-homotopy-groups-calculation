@@ -14,8 +14,8 @@ print(a, b)
 print("a^b", conjugation(a, b))
 print(conjugation(x, y))
 
-print(next(normal_closure([a])))
-print(next(normal_closure([x])))
+print(next(normal_closure(a)))
+print(next(normal_closure(x)))
 
 def test_is_in_subgroup():
     subgroup = [1, 2]
