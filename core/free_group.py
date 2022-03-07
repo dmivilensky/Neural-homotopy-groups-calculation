@@ -1,7 +1,3 @@
-import math
-import random
-
-
 def reciprocal(word):
     return [-factor for factor in word[::-1]]
 
