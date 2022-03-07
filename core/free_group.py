@@ -31,36 +31,34 @@ def normalize(word):
 
 
 '''
-    Чтобы проверить, что слово w = w_1w_2...w_n лежит в подгруппе образованной словом s = s_1s_2...s_m 
-    можно убрать из w все сдвиги s и s^-1 и проверить, что получился тривиальный элемент
-
-    интуиция:
-        w = yzx, s = xyz. Хотим привести к виду (-a)(xyz)a * (-b)(xyz)b ...
-        w = yzx = yzx y(-y) = yzx y z(-z) (-y) = yz xyz (-z)(-y)
-
-     любой сдвиг операциями домножить на элемент и на обратный ему можно привести к нормальному виду 
 
 '''
 def is_in_subgroup(subgroup, word):
-    _word, doubled_s, doubled_rs = [], subgroup * 2, reciprocal(subgroup) * 2
+    doubled_s, doubled_rs = subgroup * 2, reciprocal(subgroup) * 2
 
     def sublist(needle, source):
         m = len(needle)
         for idx, el in enumerate(source):
-            # Говорят (https://stackoverflow.com/a/12576755) el == needle[0] ускоряет
+            # el == needle[0] speeds up a little (https://stackoverflow.com/a/12576755)
             if el == needle[0] and source[idx:idx+m] == needle:
                 return idx
         return -1
-    
-    n, m, pointer = len(word), len(subgroup), 0
-    while pointer < n:
-        # s сдвиг t <=> |s| = |t| && s подстрока в t_1t_2...t_nt_1t_2...t_n 
-        if pointer + m <= n and (sublist(word[pointer:pointer + m], doubled_s) != -1 or sublist(word[pointer:pointer + m], doubled_rs) != -1):
-            pointer += m
-        else:
-            _word.append(word[pointer])
-            pointer += 1
 
+    def remove_subgroup_rotations(subgroup, word):
+        n, m, _word, pointer, flag = len(word), len(subgroup), [], 0, False
+        while pointer < n:
+            # s is a rotation of t <=> |s| = |t| && s is a substirng of t_1t_2...t_nt_1t_2...t_n 
+            if pointer + m <= n and (sublist(word[pointer:pointer + m], doubled_s) != -1 or sublist(word[pointer:pointer + m], doubled_rs) != -1):
+                pointer, flag = pointer + m, True
+            else:
+                _word.append(word[pointer])
+                pointer += 1
+        return (flag, normalize(_word))
+    
+    flag, _word = True, word[::]
+    while flag:
+        flag, _word = remove_subgroup_rotations(subgroup, _word)
+    
     return is_trivial(_word)
 
 
