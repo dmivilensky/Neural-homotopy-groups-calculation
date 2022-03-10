@@ -68,6 +68,8 @@ def columns_of_intersection(*args):
 #   This code generates folder data/datasets/2-generators;random with 100 files.
 #   Each file has a name {i}.word for i from 1 to 100, and content: {'word' : <generated word>, '1': <True / False>}
 ##
+#   With modify_dataset one can append to dataset or rewrite some of the files
+##
 
 def word_filename(idx):
     return str(idx) + '.word'
@@ -77,6 +79,7 @@ from random import sample
 from string import ascii_letters
 from json import dump
 from tqdm import tqdm
+from itertools import count as itercount
 
 def create_dataset(generator, columns, path_or_name = None, verbose = True):
     if path_or_name is None:
@@ -90,9 +93,16 @@ def create_dataset(generator, columns, path_or_name = None, verbose = True):
 
     path.mkdir(parents=True, exist_ok=True)
     
-    columns.append(('word', lambda w: w))
-    for idx, word in enumerate(generator) if not verbose else tqdm(enumerate(generator)):
-        with open(path / word_filename(idx), 'w') as file:
-            to_dump = {str(c_name) : c_value(word) for (c_name, c_value) in columns}
-            dump(to_dump, file)
+    modify_dataset(generator, columns, itercount(start=0), path, verbose)
+    
     return path
+
+def modify_dataset(generator, columns, indecies, path, verbose = True):
+    if not path.is_dir():
+        raise ValueError
+    
+    columns.append(('word', lambda w: w))
+    iterable = zip(indecies, generator)
+    for idx, word in tqdm(iterable) if verbose else iterable:
+        with open(path / word_filename(idx), 'w') as file:
+            dump({ str(c_name) : c_value(word) for (c_name, c_value) in columns }, file)
