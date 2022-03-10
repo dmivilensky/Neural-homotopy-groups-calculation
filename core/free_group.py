@@ -41,6 +41,10 @@ def is_in_subgroup(subgroup, word):
     return is_trivial(_word)
 
 
+def massive_is_in_subgroup(subgroup, words):
+    return [is_in_subgroup(subgroup, word) for word in words]
+
+
 def is_in_intersection(subgroups, word):
     return all(map(lambda s: is_in_subgroup(s, word), subgroups))
 
@@ -54,15 +58,15 @@ def is_trivial(word):
 
 
 def conjugation(word, conjugator):
-    return normalize(reciprocal(conjugator) + word + conjugator)
+    return reciprocal(conjugator) + word + conjugator
 
 
 def commutator(x, y):
-    return normalize(reciprocal(x) + reciprocal(y) + x + y)
+    return reciprocal(x) + reciprocal(y) + x + y
 
 
 def symmetric_commutator(words):
     acc = words[0]
     for w in words[1:]:
         acc = commutator(acc, w)
-    return normalize(acc)
+    return acc

@@ -2,13 +2,18 @@ from torch.utils.data import Dataset
 from pathlib import Path
 from typing import Callable
 from json import load
-from .utils import convert_to_tensor, word_filename
+from .utils import word_filename
 
+##
+#   These classes encapsulate logic of loading datasets from `data/datasets`
+##
 
 class FreeGroupDataset(Dataset):
     def __init_source__(self, source):
         if isinstance(source, Path):
             self.path = source
+        elif isinstance(source, str):
+            self.path = Path('data', 'datasets', source)
         else:
             raise ValueError('parameter `source` must be `Path`')
 
@@ -24,10 +29,9 @@ class FreeGroupDataset(Dataset):
         self.length = m + 1
 
         
-    def __init__(self, source, data_formatter, desired_labels):
+    def __init__(self, source, word_convert, labels_convert):
         super(FreeGroupDataset).__init__()
-        self.data_formatter = data_formatter
-        self.desired_labels = desired_labels
+        self.word_convert, self.labels_convert = word_convert, labels_convert
         self.__init_source__(source)
         self.__check_source_structure__()
 
@@ -39,4 +43,4 @@ class FreeGroupDataset(Dataset):
     def __getitem__(self, idx):
         with open(self.path / word_filename(idx), 'r') as file:
             to_return = load(file)
-        return self.data_formatter.word(to_return['word']), self.data_formatter.labels([to_return[str(t)] for t in self.desired_labels])
+        return self.word_convert(to_return['word']), self.labels_convert([to_return[str(k)] for k in set(to_return.keys()) - set(['word'])])
