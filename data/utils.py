@@ -1,4 +1,4 @@
-from torch import tensor, float as torchfloat
+from torch import tensor, float as torchfloat, int as torchint
 from torch.nn.functional import pad
 
 
@@ -25,9 +25,9 @@ def convert_word_pad_two_side(length=100):
 #  These methods are used in datasets to convert labels to torch tensors
 ##
 
-def convert_labels():
+def convert_labels(dtype=torchfloat):
     def convert(labels):
-        return tensor(labels, dtype=torchfloat)
+        return tensor(labels, dtype=dtype)
     return convert
 
 ########################

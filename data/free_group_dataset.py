@@ -44,3 +44,17 @@ class FreeGroupDataset(Dataset):
         with open(self.path / word_filename(idx), 'r') as file:
             to_return = load(file)
         return self.word_convert(to_return['word']), self.labels_convert([to_return[str(k)] for k in set(to_return.keys()) - set(['word'])])
+
+
+class FreeGroupDatasetFromGenerator(Dataset):
+    def __init__(self, generator, columns, word_converter, labels_converter):
+        self.words = list(generator)
+        self.columns = columns
+        self.word_converter = word_converter
+        self.labels_converter = labels_converter
+
+    def __len__(self):
+        return len(self.words)
+
+    def __getitem__(self, idx):
+        return self.word_converter(self.words[idx]), self.labels_converter([c(self.words[idx]) for (_, c) in self.columns])
