@@ -3,58 +3,57 @@ def reciprocal(word):
 
 
 def normalize(word):
-    _word = []
-    for el in word:
-        if el != 0 and (len(_word) == 0 or _word[-1] != -el):
-            _word.append(el)
+    normalized = []
+
+    for factor in word:
+        if factor == 0:
+            continue
+        if len(normalized) == 0:
+            normalized.append(factor)
+            continue
+
+        if factor == -normalized[-1]:
+            normalized.pop()
         else:
-            _word.pop()
-    return _word
+            normalized.append(factor)
+
+    return normalized
 
 
-def is_in_subgroup(subgroup, word):
-    doubled_s, doubled_rs = subgroup * 2, reciprocal(subgroup) * 2
+def is_cyclic_permutation(a, b):
+    if len(a) != len(b):
+        return False
 
-    def sublist(needle, source):
-        m = len(needle)
-        for idx, el in enumerate(source):
-            # el == needle[0] speeds up a little (https://stackoverflow.com/a/12576755)
-            if el == needle[0] and source[idx:idx+m] == needle:
-                return idx
-        return -1
+    double_b = b * 2
+    for i in range(2 * len(b)):
+        if double_b[i] == a[0] and double_b[i:i + len(a)] == a:
+            return True
+    return False
 
-    def remove_subgroup_rotations(subgroup, word):
-        n, m, _word, pointer, flag = len(word), len(subgroup), [], 0, False
-        while pointer < n:
-            # s is a rotation of t <=> |s| = |t| && s is a substirng of t_1t_2...t_nt_1t_2...t_n 
-            if pointer + m <= n and (sublist(word[pointer:pointer + m], doubled_s) != -1 or sublist(word[pointer:pointer + m], doubled_rs) != -1):
-                pointer, flag = pointer + m, True
+
+def is_from_normal_closure(generator, word):
+    contained_smth_to_reduce = True
+    generator_len = len(generator)
+
+    while contained_smth_to_reduce:
+        contained_smth_to_reduce = False
+        new_word = []
+
+        i = 0
+        while i <= len(word) - generator_len:
+            subword = word[i:i + generator_len]
+            if is_cyclic_permutation(subword, generator) or is_cyclic_permutation(subword, reciprocal(generator)):
+                contained_smth_to_reduce = True
+                i += generator_len
             else:
-                _word.append(word[pointer])
-                pointer += 1
-        return (flag, normalize(_word))
+                new_word.append(word[i])
+                i += 1
+        
+        if i < len(word):
+            new_word += word[-(len(word)-i):]
+        word = normalize(new_word)
     
-    flag, _word = True, word[::]
-    while flag:
-        flag, _word = remove_subgroup_rotations(subgroup, _word)
-    
-    return is_trivial(_word)
-
-
-def massive_is_in_subgroup(subgroup, words):
-    return [is_in_subgroup(subgroup, word) for word in words]
-
-
-def is_in_intersection(subgroups, word):
-    return all(map(lambda s: is_in_subgroup(s, word), subgroups))
-
-
-def wu_numerator_subgroups(group_index):
-    return [[t] for t in range(1, group_index + 1)] + [[t for t in range(1, group_index + 1)]]
-
-
-def is_trivial(word):
-    return len(word) == 0 or len(normalize(word)) == 0
+    return len(word) == 0
 
 
 def conjugation(word, conjugator):
@@ -70,3 +69,12 @@ def symmetric_commutator(words):
     for w in words[1:]:
         acc = commutator(acc, w)
     return acc
+
+
+def word_as_str(word):
+    letters = "xyzpqrstuvwklmn"
+    return "".join(map(lambda factor: letters[abs(factor) - 1] + ("⁻¹" if factor < 0 else ""), word))
+
+
+def print_word(word):
+    print(word_as_str(word))

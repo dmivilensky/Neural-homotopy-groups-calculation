@@ -1,141 +1,70 @@
-from random import sample, random
-from math import asinh, cosh
-from .free_group import reciprocal, conjugation, normalize
+import math
+import random
+from .free_group import *
 
 
-##
-#   Structures are used to generate words from free groups
-##
-#   gen1 = ClosureGenerator(generators_number=2, length_config = {'max-length': 50}, subgroup=[1])
-#   gen2 = ClosureGenerator(generators_number=2, length_config = {'max-length': 50})
-#   gen = ChoiceGenerator((gen1, 0.6), (gen2, 0.4)) 
-##
-#   gen now generates with 0.6 chance element from normal closure of [1] and with chance 0.4 random element from F = <x, y>
-##
-#   for word in gen.take(10):
-#       print(word)
-##
-#   This code will print ten words from gen
-##
+def uniform_hyperbolic_length(radius=5):
+    # https://arxiv.org/pdf/1805.08207.pdf 6.3 Uniform sampling in hyperbolic space
+    while True:
+        yield max(1, int(round(math.acosh(1 + random.random() * (math.cosh(radius) - 1)))))
 
 
-##
-#   This abastraction is used to encode how to generate length for elements.
-#   'length' means that all generated elements will be with the given length
-#   'max-length' means that length will be generated using hyperbolic (?) distribution in range of 1 to max-length
-#   'dist' means that length will be generated using given distribution
-##
+def constant_length(length=5):
+    while True:
+        yield length
 
-class LengthConfig:
-    LENGTH = 'length'
-    MAX_LENGTH = 'max-length'
-    DIST = 'dist'
 
-    @classmethod
-    def read_length_config(cls, length_config):
-        if cls.LENGTH in length_config:
-            return lambda: length_config[cls.LENGTH]
-        elif cls.MAX_LENGTH in length_config:
-            return lambda: max(1, int(asinh(random() * cosh(length_config[cls.MAX_LENGTH] - 1))))
-        elif cls.DIST in length_config:
-            return length_config[cls.DIST]
-        else:
-            raise ValueError('incorrect `length_config`')
+def uniform_length(max_length=5):
+    while True:
+        yield random.sample(range(1, max_length + 1), 1)[0]
 
-##
-#   These methods are helpers for WordGenerators
-##
 
-def generate_from_free_group(generators_number, length_config):
-    generators = set(range(-generators_number, generators_number + 1)) - set([0])
-    length_generator = LengthConfig.read_length_config(length_config)
-    word, length = [], length_generator()
+def from_free_group(generators_number=2, length_distribution=uniform_hyperbolic_length(5)):
+    generators = set(range(1, generators_number + 1)) | set(range(-generators_number, 0))
 
-    for _ in range(length):
-        factor = sample(generators - set(reciprocal(word[-1:])), 1)[0]
-        word.append(factor)
+    while True:
+        length = next(length_distribution)
+        word = [random.sample(generators, 1)[0]]
+
+        for _ in range(length-1):
+            factor = random.sample(generators - set([-word[-1]]), 1)[0]
+            word.append(factor)
         
-    return word
+        yield word
 
 
-def generate_from_normal_closure(subgroup, generators_number, length_config):
-    length_generator = LengthConfig.read_length_config(length_config)
-    word, length = [], length_generator()
+def from_normal_closure(subgroup, generators_number=2, length_distribution=uniform_hyperbolic_length(5)):
+    while True:
+        length = next(length_distribution)
+        word = []
 
-    while len(word) < length:
-        factor = subgroup if random() > 0.5 else reciprocal(subgroup)
-            
-        conjugator = generate_from_free_group(
-            generators_number=generators_number,
-            length_config={LengthConfig.MAX_LENGTH : (length - len(word) - len(factor)) // 2}
-        )
-        word += conjugation(factor, conjugator)
+        while len(word) < length:
+            factor = random.sample(subgroup, 1)[0]
+            if random.random() > 0.5:
+                factor = reciprocal(factor)
 
-    return normalize(word)
+            conjugator = next(from_free_group(
+                generators_number=generators_number, 
+                length_distribution=uniform_hyperbolic_length(radius=(length - len(word) - len(factor)) // 2)
+            ))
+            word += conjugation(factor, conjugator)
+
+        yield normalize(word)
 
 
-##
-#   These classes are used to build generators of words from free group
-##
+def from_choice(*probabilities_with_generators):
+    probabilities_with_generators = list(probabilities_with_generators)    
+    assert sum(map(lambda p: p[0], probabilities_with_generators)) >= 1.
 
-class WordGenerator:
-    def __iter__(self):
-        return self
+    while True:
+        accumulated, coin = 0, random.random()
+        for probability, generator in probabilities_with_generators:
+            accumulated += probability
+            if coin <= accumulated:
+                yield next(generator)
+                break
 
-    def __next__(self):
-        raise StopIteration
 
-    def __call__(self):
-        return self.__next__()
-
-    def take(self, count):
-        return BoundedGenerator(self, count)
-
-    def append(self, generator):
-        return SequenceGenerator(self, generator)         
-
-class ChoiceGenerator(WordGenerator):
-    def __init__(self, *args):
-        self.generators = list(args)
-
-    def __next__(self):
-        rand_point, current = random(), 0
-        for gen, proba in self.generators:
-            if current + proba >= rand_point:
-                return gen()
-        return self.generators[-1][0]()
-
-class ClosureGenerator(WordGenerator):
-    def __init__(self, generators_number, length_config, subgroup = None):
-        self.generators_number = generators_number
-        self.length_config = length_config
-        self.subgroup = subgroup
-
-    def __next__(self):
-        return generate_from_free_group(self.generators_number, self.length_config) if self.subgroup is None else generate_from_normal_closure(self.subgroup, self.generators_number, self.length_config)
-
-class BoundedGenerator(WordGenerator):
-    def __init__(self, generator, count):
-        self.generator, self.to_generate = generator, count
-
-    def __next__(self):
-        if self.to_generate >= 0:
-            self.to_generate -= 1
-            return self.generator()
-        else:
-            raise StopIteration
-
-class SequenceGenerator(WordGenerator):
-    def __init__(self, *args):
-        self.sequence = list(args)
-
-    def __next__(self):
-        while self.sequence:
-            try:
-                return self.sequence[0]()
-            except StopIteration:
-                self.sequence.pop(0)
-        raise StopIteration
-
-    def append(self, generator):
-        self.sequence.append(generator)
+def from_uniform_choice(*generators):
+    generators = list(generators)
+    return from_choice(*[(1/len(generators), gen) for gen in generators])
