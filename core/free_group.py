@@ -31,7 +31,7 @@ def is_cyclic_permutation(a, b):
     return False
 
 
-def is_from_normal_closure(generator, word):
+def reduce_cyclic_permutations(generator, word):
     contained_smth_to_reduce = True
     generator_len = len(generator)
 
@@ -52,8 +52,38 @@ def is_from_normal_closure(generator, word):
         if i < len(word):
             new_word += word[-(len(word)-i):]
         word = normalize(new_word)
-    
-    return len(word) == 0
+    return word
+
+
+def is_from_normal_closure(generator, word):
+    return len(reduce_cyclic_permutations(generator, word)) == 0
+
+
+def minimal_change_to_balance(word, weights):
+    if len(word) == 0:
+        return 0
+    w_change, w_remove = weights
+    n = len(word)
+    dp = [[10**9] * (n + 1) for _ in range(n + 1)]
+    for pos in range(n):
+        dp[pos][pos] = 0
+        dp[pos][pos + 1] = w_remove
+    for d in range(1, n):
+        for l in range(n - d):
+            choice = [
+                (0 if word[l] == -word[l + d] else w_change) + dp[l + 1][l + d],
+                (0 if word[l] == -word[l + 1] else w_change) + dp[l + 2][l + d + 1],
+                (0 if word[l + d] == -word[l + d - 1] else w_change) + dp[l][l + d - 1],
+                w_remove + dp[l + 1][l + d + 1],
+                w_remove + dp[l][l + d],
+            ]
+            dp[l][l + d + 1] = min(choice)
+    return dp[0][len(word)]
+
+
+def minimal_change_to_balance_distance(word, generator, weights = [1, 1]):
+    reduced = reduce_cyclic_permutations(generator, word)
+    return minimal_change_to_balance(reduced, weights)
 
 
 def conjugation(word, conjugator):
