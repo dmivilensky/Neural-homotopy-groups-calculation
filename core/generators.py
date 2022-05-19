@@ -1,9 +1,13 @@
 import math
 import random
-from .free_group import *
+import numpy.random as r
+import core.free_group as group
 
 
 def uniform_hyperbolic_length(radius=5):
+    if radius <= 0:
+        while True:
+            yield 0
     # https://arxiv.org/pdf/1805.08207.pdf 6.3 Uniform sampling in hyperbolic space
     while True:
         yield max(1, int(round(math.acosh(1 + random.random() * (math.cosh(radius) - 1)))))
@@ -39,32 +43,42 @@ def from_normal_closure(subgroup, generators_number=2, length_distribution=unifo
         word = []
 
         while len(word) < length:
-            factor = random.sample(subgroup, 1)[0]
+            factor = subgroup[::]
             if random.random() > 0.5:
-                factor = reciprocal(factor)
+                factor = group.reciprocal(factor)
+
+            if (length - len(word) - len(factor)) // 2 <= 0:
+                break
 
             conjugator = next(from_free_group(
                 generators_number=generators_number, 
                 length_distribution=uniform_hyperbolic_length(radius=(length - len(word) - len(factor)) // 2)
             ))
-            word += conjugation(factor, conjugator)
+            if random.random() > 0.5:
+                conjugator = group.reciprocal(conjugator)
+            word += group.conjugation(factor, conjugator)
 
-        yield normalize(word)
-
-
-def from_choice(*probabilities_with_generators):
-    probabilities_with_generators = list(probabilities_with_generators)    
-    assert sum(map(lambda p: p[0], probabilities_with_generators)) >= 1.
-
-    while True:
-        accumulated, coin = 0, random.random()
-        for probability, generator in probabilities_with_generators:
-            accumulated += probability
-            if coin <= accumulated:
-                yield next(generator)
-                break
+        yield group.normalize(word)
 
 
-def from_uniform_choice(*generators):
-    generators = list(generators)
-    return from_choice(*[(1/len(generators), gen) for gen in generators])
+class RandomChoiceGenerator:
+    def __init__(self, generators, p = None):
+        if p is None:
+            self.p = [1 / len(generators)] * len(generators)
+        self.generators = generators
+
+    def __next__(self):
+        coin = random.random()
+        accumulated = 0
+        for p, gen in zip(self.p, self.generators):
+            accumulated += p
+            if accumulated >= coin:
+                return next(gen)
+        return next(self.generators[-1])
+
+
+def sample_word(generators_number, probas):
+    choice_set = list(range(-generators_number, generators_number + 1))
+    return list(map(
+        lambda prob: r.choice(choice_set, size = 1, p=prob)[0], probas
+    ))

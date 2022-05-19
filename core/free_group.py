@@ -56,6 +56,31 @@ def is_from_normal_closure(generator, word):
     return len(word) == 0
 
 
+def minimal_change_to_identity(word):
+    inf = 10 ** 9
+    n = len(word)
+
+    dp = [[inf for d in range(0, n - l + 1)] for l in range(n)]
+    for l in range(n):
+        dp[l][0] = 0
+        dp[l][1] = 0 if word[l] == 0 else 1
+    
+    for d in range(2, n + 1):
+        for l in range(n - d + 1):
+            choice = [
+                dp[l + 1][d - 1] if word[l] == 0 else inf,
+                dp[l][d - 1] if word[l + d - 1] == 0 else inf,
+                dp[l + 1][d - 2] if word[l] == -word[l + d - 1] else inf,
+                1 + dp[l + 1][d - 2], # change one of word[l], word[r] to make them reciprocal
+                1 + dp[l][d - 1], # change word[r] to 0
+                1 + dp[l + 1][d - 1], # change word[l] to 0
+                *[dp[l][split - l] + dp[split][l + d - split] for split in range(l, l + d)]
+            ]
+            dp[l][d] = min(choice)
+
+    return dp[0][n]
+
+
 def conjugation(word, conjugator):
     return reciprocal(conjugator) + word + conjugator
 
