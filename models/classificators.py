@@ -1,61 +1,97 @@
-from torch.nn import Module, Conv1d, Linear, ReLU, Sigmoid, Sequential, Flatten, Unflatten, BatchNorm1d
+import torch.nn as nn
+import torch
 
 
-class ConvolutionFeatureExtractor(Module):
-    def __sub_module__(self, input_channels):
-        return Sequential(
-            Conv1d(in_channels = input_channels, out_channels = 2 * input_channels, kernel_size = 3),
-            BatchNorm1d(2 * input_channels),
-            ReLU()
-        )
+def Conv2dNormReLU(
+    input_channels, output_channels, kernel_size = 3, padding = 0, stride = 1, need_norm = True, alpha = 0.1
+):
+    result = nn.Sequential(
+        nn.Conv2d(input_channels, output_channels, kernel_size = kernel_size, padding = padding, stride = stride)
+    )
+    if need_norm:
+        result.append(nn.BatchNorm2d(output_channels))
+    if not alpha is None:
+        result.append(nn.LeakyReLU(alpha))
+    return result
 
-    def __init__(self, initial_length = 50, up_samplings = 5):
+
+def Conv1dNormActivation(
+    input_channels,
+    output_channels,
+    kernel_size = 3,
+    padding = 0,
+    need_norm=True,
+    activation = nn.LeakyReLU(0.1)
+):
+    result = nn.Sequential(
+        nn.Conv1d(input_channels, output_channels, kernel_size = kernel_size, padding = padding)
+    )
+    if need_norm:
+        result.append(nn.BatchNorm1d(output_channels))
+    if not activation is None:
+        result.append(activation)
+    return result
+ 
+
+class LSTMFeatureExtractor(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers = 1, bias = False):
         super().__init__()
-        self.layer = Sequential(
-            *[self.__sub_module__(2 ** idx) for idx in range(up_samplings)]
+        self.layer = nn.LSTM(
+            input_size = input_size,
+            hidden_size = hidden_size,
+            num_layers = num_layers,
+            batch_first = True,
+            bias = bias,
         )
-        self.flatten_size = 2 ** (up_samplings) * (initial_length - 2 * up_samplings)
-    
 
     def forward(self, batch):
-        return self.layer(batch)
+        ret, _ = self.layer(batch)
+        return ret
 
 
-class LinearClassificator(Module):
+class LinearClassificator(nn.Module):
     def __sub_module__(self, input_length, output_length):
-        return Sequential(
-            Linear(input_length, output_length),
-            ReLU()
+        return nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(input_length, output_length),
+            nn.ReLU()
         )
 
-    def __init__(self, input_length, linear_layers = [64, 32], classes = 1):
+    def __init__(self, input_length, hidden_layers = [64, 32]):
         super().__init__()
-        linear_layers = [input_length] + linear_layers
-        self.layer = Sequential(
+        hidden_layers = [input_length] + hidden_layers
+        self.layer = nn.Sequential(
             *[
-                self.__sub_module__(input_length, output_length) for input_length, output_length in zip(linear_layers, linear_layers[1:])
+                self.__sub_module__(input_length, output_length) for input_length, output_length in zip(hidden_layers, hidden_layers[1:])
             ],
-            Linear(linear_layers[-1], classes),
-            Sigmoid()
+            nn.Linear(hidden_layers[-1], 1),
+            nn.Sigmoid()
         )
 
     def forward(self, batch):
         return self.layer(batch)
 
 
-class ConvolutionNormalClosureClassificator(Module):
-    def __init__(self, initial_length = 50, up_samplings = 5, linear_layers = [64, 32]):
+class NormalClosureClassificator(nn.Module):
+    def __init__(self, input_shape, feautre_extractors, hidden_layers = [64, 32]):
         super().__init__()
-        
-        self.unflatten          = Unflatten(dim = 1, unflattened_size = (1, initial_length))
-        self.feature_extractor  = ConvolutionFeatureExtractor(initial_length, up_samplings)
-        self.classificator      = LinearClassificator(self.feature_extractor.flatten_size, linear_layers)
-        self.flatten            = Flatten()
+        stub_input = torch.zeros(input_shape).unsqueeze(0)
+        self.feautre_extractors = feautre_extractors
+        self.classificator      = LinearClassificator(sum(map(lambda ex: ex.forward(stub_input).flatten().size()[0], feautre_extractors)), hidden_layers)
+        self.flatten            = nn.Flatten()
 
+    def __for_each_extractor__(self, func):
+        for extractor in self.feautre_extractors:
+            func(extractor)
+
+    def to(self, arg):
+        for i, e in enumerate(self.feautre_extractors):
+            self.feautre_extractors[i] = e.to(arg)
+        return super().to(arg)
+        
     def forward(self, batch):
-        batch = self.unflatten(batch)
-        batch = self.feature_extractor(batch)
-        batch = self.flatten(batch)
-        batch = self.classificator(batch)
-        return batch
+        features = torch.hstack(list(map(
+            lambda ex: self.flatten(ex(batch)), self.feautre_extractors
+        )))
+        return self.classificator(features)
         
